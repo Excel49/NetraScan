@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+dist/
+build/
+*.egg-info/
+output/
+temp/
+# Keep calibration.json? User might want to commit their calibration
+# calibration.json

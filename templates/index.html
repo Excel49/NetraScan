@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetraScan Lite</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- CSS -->
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- SocketIO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Three.js (for Point Cloud) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">
+            <h1>NetraScan 3D <span style="font-weight:400; opacity:0.7; font-size:1rem;">Lite</span></h1>
+        </div>
+        <div class="status-indicator">
+            <span class="badge active">System Ready</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Calibration Section -->
+        <section class="card">
+            <div class="card-header">
+                <span style="font-size: 2rem;">⚖️</span>
+                <h2 class="card-title">Calibration</h2>
+            </div>
+
+            <div class="video-container">
+                <img src="{{ url_for('video_feed') }}" class="video-feed" id="calibVideoFeed" alt="Camera Feed">
+            </div>
+
+            <div class="controls">
+                <button id="btn-start-calib" class="btn btn-primary">Calibrate Camera</button>
+                <button id="btn-calib-laser" class="btn btn-secondary">Calibrate Laser</button>
+                <button id="btn-toggle-axis" class="btn btn-secondary" style="background-color: #6c757d;">Show
+                    Axis</button>
+            </div>
+
+            <div class="status-box">
+                <div style="width:100%">
+                    <div id="calib-status">Ready to calibrate. Place ChArUco board in view.</div>
+                    <div class="progress-bar">
+                        <div id="calib-progress" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scanning Section -->
+        <section class="card">
+            <div class="card-header">
+                <span style="font-size: 2rem;">🧊</span>
+                <h2 class="card-title">3D Scanning</h2>
+            </div>
+
+            <div class="video-container" style="position: relative;">
+                <img src="{{ url_for('video_feed', mode='laser') }}" class="video-feed" id="videoStream"
+                    alt="Scan Feed">
+            </div>
+
+            <!-- Point Cloud Container -->
+            <div id="pointCloudCanvas"
+                style="width: 100%; height: 300px; background: #000; margin-top: 10px; border-radius: 8px; position:relative;">
+                <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
+                    <button id="btn-view-reset" class="btn btn-sm"
+                        style="padding: 4px 8px; font-size: 0.8rem; background:rgba(0,0,0,0.5);">Reset</button>
+                    <button id="btn-view-top" class="btn btn-sm"
+                        style="padding: 4px 8px; font-size: 0.8rem; background:rgba(0,0,0,0.5);">Top</button>
+                    <button id="btn-view-front" class="btn btn-sm"
+                        style="padding: 4px 8px; font-size: 0.8rem; background:rgba(0,0,0,0.5);">Front</button>
+                </div>
+            </div>
+            <div id="pointCloudInfo" style="color: #aaa; font-size: 0.8rem; text-align: center; margin-top: 5px;">
+                Points: 0 | Left-Click: Rotate | Right-Click: Pan | Scroll: Zoom
+            </div>
+
+            <div class="controls" style="margin-top: 10px; flex-direction: column; align-items: flex-start;">
+                <label style="color: #aaa; font-size: 0.9rem; margin-bottom: 5px;">Laser Threshold: <span
+                        id="thresholdValue" style="color: white; font-weight: bold;">60</span></label>
+                <input type="range" id="laserThreshold" min="0" max="255" value="60" style="width: 100%;">
+            </div>
+
+            <div class="controls" style="margin-top: 10px; flex-direction: column; align-items: flex-start;">
+                <label style="color: #aaa; font-size: 0.9rem; margin-bottom: 5px;">Camera Exposure: <span
+                        id="exposureValue" style="color: white; font-weight: bold;">-5</span></label>
+                <input type="range" id="cameraExposure" min="-13" max="-1" value="-5" step="1" style="width: 100%;">
+                <small style="color: #666;">Lower value = Darker image (Better for laser)</small>
+            </div>
+
+            <div class="controls">
+                <button id="btn-start-scan" class="btn btn-primary">Start Scan</button>
+                <button id="btn-stop-scan" class="btn btn-danger" disabled>Stop</button>
+            </div>
+
+            <div class="status-box">
+                <div style="width:100%">
+                    <div id="scan-status">Ready to scan.</div>
+                    <div class="progress-bar">
+                        <div id="scan-progress" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/visualizer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
