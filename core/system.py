@@ -22,11 +22,11 @@ class SystemController:
         return cls._instance
 
     def __init__(self):
-        self.camera = Camera(index=1) # Default index
+        self.camera = Camera(index=0) # Default index
         
         # Hardware
         # Updated to new TurntableController (HTTP)
-        self.turntable = TurntableController(ip_address="192.168.1.39")
+        self.turntable = TurntableController(ip_address="10.42.37.40")
         
         self.laser = LaserDetector()
         

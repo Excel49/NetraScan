@@ -96,8 +96,9 @@ class Scanner:
                     break
                 
                 # a. Capture Frame
-                # Wait for stability
-                time.sleep(0.4) 
+                # Wait for stability (Configurable settle time)
+                time.sleep(config.SCAN_SETTLE_TIME) 
+                
                 frame = self.system.camera.get_frame()
                 
                 if frame is not None:
@@ -105,9 +106,13 @@ class Scanner:
                     laser_points = self.system.laser.detect(frame)
                     
                     # c. Triangulate
-                    scan_angle = i * step_increment
-                    
+                    # Use actual angle from turntable if connected, else calculated
+                    current_angle = i * step_increment
+                    if self.system.turntable.connected:
+                        current_angle = self.system.turntable.current_angle
+
                     # Apply INVERT_ROTATION
+                    scan_angle = current_angle
                     if config.INVERT_ROTATION:
                         scan_angle = -scan_angle
                     
@@ -126,12 +131,15 @@ class Scanner:
                             callback_data(colored_points)
                             
                         # DEBUG
-                        if i % 10 == 0:
+                        if i % 5 == 0:
                             print(f"   Step {i}: Found {len(points_3d)} points at {abs(scan_angle):.1f}°")
 
                 # f. Rotate
                 if self.system.turntable.connected:
-                    self.system.turntable.rotate_by(step_increment)
+                    # Revert to speed_profile=0 (Fast) as 'Slow' caused vibration/roughness
+                    self.system.turntable.rotate_by(step_increment, speed_profile=0)
+                    # WAIT for rotation to finish!
+                    self.system.turntable.wait_for_stop(timeout=10)
                 else:
                     time.sleep(0.05) # Simulation
                 
@@ -151,3 +159,39 @@ class Scanner:
             
         return self.points
 
+    def save_ply(self, filename, points=None):
+        """
+        Save points to PLY file (ASCII format)
+        points: List of [x, y, z, r, g, b]
+        """
+        if points is None:
+            points = self.points
+            
+        if not points:
+            print("⚠️ No points to save.")
+            return False
+            
+        try:
+            with open(filename, 'w') as f:
+                f.write("ply\n")
+                f.write("format ascii 1.0\n")
+                f.write(f"element vertex {len(points)}\n")
+                f.write("property float x\n")
+                f.write("property float y\n")
+                f.write("property float z\n")
+                f.write("property uchar red\n")
+                f.write("property uchar green\n")
+                f.write("property uchar blue\n")
+                f.write("end_header\n")
+                
+                for p in points:
+                    # p is [x, y, z, r, g, b] (colors 0-255)
+                    # Coordinates are in meters? PLY usually prefers standard units. 
+                    # If meters, it's fine.
+                    f.write(f"{p[0]:.6f} {p[1]:.6f} {p[2]:.6f} {int(p[3])} {int(p[4])} {int(p[5])}\n")
+            
+            print(f"✅ Saved PLY to {filename}")
+            return True
+        except Exception as e:
+            print(f"❌ Error saving PLY: {e}")
+            return False

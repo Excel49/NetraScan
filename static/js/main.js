@@ -159,10 +159,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Scanning Logic ---
     let allPoints = []; // Store cumulative points
 
+    const downloadScanBtn = document.getElementById('btn-download-scan');
+
     startScanBtn.addEventListener('click', async () => {
         try {
             startScanBtn.disabled = true;
             stopScanBtn.disabled = false;
+            // Hide download button during scan
+            if (downloadScanBtn) downloadScanBtn.style.display = 'none';
+
             scanStatus.textContent = "Starting scan...";
 
             // Reset points
@@ -223,6 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
         stopScanBtn.disabled = true;
         scanStatus.innerHTML = "✅ Scan " + data.status;
         scanProgress.style.width = '100%';
+
+        if (data.status === 'completed' && data.download_url && downloadScanBtn) {
+            downloadScanBtn.href = data.download_url;
+            downloadScanBtn.style.display = 'inline-block';
+            downloadScanBtn.innerHTML = "Download Result (.PLY)";
+        }
 
         // Final sync if needed
         if (data.points_count && data.points_count !== allPoints.length) {

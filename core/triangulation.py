@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 import json
 import logging
 from datetime import datetime
@@ -62,10 +63,10 @@ class TriangulationEngine:
         points_3d = []
         angle_rad = np.radians(angle_deg)
         
-        # Precompute rotation terms
-        # Note: This compensates for turntable rotation
-        cos_a = np.cos(-angle_rad)  # Negative for compensation
-        sin_a = np.sin(-angle_rad)
+        # Precompute rotation terms for Turntable (Z-axis rotation)
+        # Turntable rotates around Z (Up), so we apply inverse rotation to points
+        cos_a = np.cos(angle_rad) 
+        sin_a = np.sin(angle_rad)
         
         # Precompute camera matrix inverse
         inv_camera_matrix = np.linalg.inv(self.camera_matrix)
@@ -73,40 +74,57 @@ class TriangulationEngine:
         n = self.laser_plane[:3]
         d = self.laser_plane[3]
 
-        for x, y in pixel_points:
-            # Convert pixel to normalized camera coordinates
-            pixel = np.array([x, y, 1.0], dtype=np.float32)
-            ray_dir = inv_camera_matrix @ pixel
-            ray_dir = ray_dir / np.linalg.norm(ray_dir)
+        # Get transformation matrix (Camera -> World)
+        T_cw = self.world_transform
+
+        # Prepare pixel points for undistortion
+        if len(pixel_points) > 0:
+            # Convert to numpy array of shape (N, 1, 2)
+            pixels = np.array(pixel_points, dtype=np.float32).reshape(-1, 1, 2)
             
-            # Intersect with laser plane
-            # dot(n, (start + t*dir)) + d = 0  => t = -(d + dot(n, start)) / dot(n, dir)
-            # Assuming camera center is at (0,0,0) in camera coords, so start=0. 
-            # t = -d / dot(n, dir)
+            # Undistort points
+            # This converts pixels to normalized coordinates (x, y) on the image plane (z=1)
+            # taking distortion into account.
+            undistorted = cv2.undistortPoints(pixels, self.camera_matrix, self.dist_coeffs, P=self.camera_matrix)
             
-            denom = np.dot(n, ray_dir)
-            if abs(denom) < 1e-6:
-                continue
+            # Reshape back to (N, 2)
+            undistorted = undistorted.reshape(-1, 2)
+            
+            for i in range(len(undistorted)):
+                u, v = undistorted[i]
                 
-            t = -d / denom
-            point_camera = t * ray_dir
-            
-            # Apply camera offset to get to world/turntable base frame (before rotation)
-            # point_world_static = point_camera + self.camera_position
-            # Actually, usually calibration gives camera pose relative to turntable.
-            # If camera_position is the location of camera center in turntable frame:
-            # Point in turntable frame = R_cam * point_camera + T_cam
-            # Here simplified as just translation for now based on previous code
-            
-            point_world = point_camera + self.camera_position
-            
-            # Rotate based on turntable angle
-            # Rotation around Y axis (vertical in this coordinate system)
-            x_rot = point_world[0] * cos_a - point_world[2] * sin_a
-            y_rot = point_world[1]  # Y unchanged (height)
-            z_rot = point_world[0] * sin_a + point_world[2] * cos_a
-            
-            points_3d.append([float(x_rot), float(y_rot), float(z_rot)])
+                # 1. Ray Casting in Camera Frame
+                # Since we used P=camera_matrix in undistortPoints, the output (u, v) 
+                # are still in pixel units but undistorted.
+                # So we can use the same ray casting logic as before.
+                pixel = np.array([u, v, 1.0], dtype=np.float32)
+                ray_dir = inv_camera_matrix @ pixel
+                ray_dir = ray_dir / np.linalg.norm(ray_dir)
+                
+                # 2. Intersect with Laser Plane (Camera Frame)
+                denom = np.dot(n, ray_dir)
+                if abs(denom) < 1e-6:
+                    continue
+                    
+                t = -d / denom
+                if t < 0: continue # Point is behind camera
+                
+                point_camera = t * ray_dir
+                
+                # 3. Transform to World/Turntable Frame (Static 0°)
+                point_camera_h = np.append(point_camera, 1.0)
+                point_world_static_h = T_cw @ point_camera_h
+                point_world_static = point_world_static_h[:3]
+                
+                # 4. Apply Turntable Rotation (Dynamic)
+                cos_neg = np.cos(-angle_rad)
+                sin_neg = np.sin(-angle_rad)
+                
+                x_rot = point_world_static[0] * cos_neg - point_world_static[1] * sin_neg
+                y_rot = point_world_static[0] * sin_neg + point_world_static[1] * cos_neg
+                z_rot = point_world_static[2]
+                
+                points_3d.append([float(x_rot), float(y_rot), float(z_rot)])
         
         return points_3d
     

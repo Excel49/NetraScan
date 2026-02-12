@@ -173,7 +173,16 @@ def run_scan_thread():
 
     try:
         points = system.scanner.start_scan(callback_progress=progress_cb, callback_data=data_cb)
-        socketio.emit('scan_complete', {'status': 'completed', 'points_count': len(points)})
+        
+        # Save Result Automatically
+        save_path = os.path.join(current_dir, "static", "scan_result.ply")
+        system.scanner.save_ply(save_path)
+        
+        socketio.emit('scan_complete', {
+            'status': 'completed', 
+            'points_count': len(points),
+            'download_url': '/static/scan_result.ply'
+        })
     except Exception as e:
         print(f"❌ Scan Error: {e}")
         socketio.emit('scan_complete', {'status': 'error', 'message': str(e)})
@@ -234,6 +243,16 @@ def api_get_config():
         "camera_position": getattr(config, 'VISUALIZER_CAMERA_POSITION', [0, 8, 10]),
         # Add other frontend configs here if needed
     })
+
+@app.route('/api/download/ply', methods=['GET'])
+def api_download_ply():
+    """Download the latest scan result"""
+    path = os.path.join(current_dir, "static", "scan_result.ply")
+    if os.path.exists(path):
+        from flask import send_file
+        return send_file(path, as_attachment=True, download_name='scan.ply')
+    else:
+        return jsonify({"error": "No scan available"}), 404
 
 def capture_calibration_frames(num_captures=10, event_name='calibration_status'):
     """Helper to capture frames with turntable rotation"""

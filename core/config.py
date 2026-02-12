@@ -33,7 +33,7 @@ CHECKER_BOARD_SIZE = (4, 4)     # Inner corners (4x4 for 5x5 squares)
 CHECKER_SQUARE_SIZE = 0.025     # 25mm in meters
 
 # --- PENGATURAN KAMERA ---
-CAMERA_INDEX = 1  # Default 1 (External), Fallback 0
+CAMERA_INDEX = 0  # Default 0 (Webcam), Fallback 0
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
 
@@ -54,11 +54,17 @@ TURNTABLE_STEPS_PER_REV = 4571
 # 360 = 1 derajat per langkah (Detail Standar)
 # 720 = 0.5 derajat per langkah (Lebih Halus, Lebih Lama)
 # 180 = 2 derajat per langkah (Cepat, Kurang Detail)
-SCAN_STEPS_TOTAL = 4  # DEBUG: 4 step (0°, 90°, 180°, 270°)
-
+SCAN_STEPS_TOTAL = 360  # 1 derajat per langkah (Detail Maksimal - Butuh ~6 menit)
+ 
 # Waktu jeda (detik) setiap kali meja berhenti sebelum ambil foto.
 # Jika hasil scan berbayang/goyang, naikkan jadi 0.5 atau 1.0.
-SCAN_SETTLE_TIME = 0.15
+SCAN_SETTLE_TIME = 0.5
+
+# --- PENGATURAN DATA POINT CLOUD ---
+# Batas jari-jari scan dari tengah meja (dalam mm). 
+# Titik di luar radius ini akan dibuang (untuk menghilangkan tembok/background).
+# Sesuaikan dengan ukuran piringan meja putar Anda.
+SCAN_RADIUS_LIMIT = 150.0  # mm
 
 # --- PENGATURAN OFFSET HASIL SCAN ---
 # Tambahkan nilai ini (dalam meter/satuan sistem) ke posisi akhir.
@@ -72,7 +78,7 @@ SCAN_Z_OFFSET = 0.0
 # Tambahkan nilai ini (dalam derajat) untuk memutar hasil scan.
 # Format: [Rotasi X, Rotasi Y, Rotasi Z]
 # Contoh: [5.0, 0.0, 0.0] -> Miring 5 derajat di sumbu X.
-SCAN_ROTATION_OFFSET = [180.0, 0.0, 0.0]
+SCAN_ROTATION_OFFSET = [0.0, 0.0, 0.0]
 
 # --- INVERT ROTATION (OLD - IGNORE IF USING AXIS MAP BELOW) ---
 # Set True jika hasil scan terbalik (mirrored) depan-belakang/kiri-kanan
@@ -87,7 +93,7 @@ INVERT_ROTATION = True
 
 # Contoh 1 (Default): [0, 1, 2] -> X=X, Y=Y, Z=Z
 # Contoh 2 (Tukar Y dan Z): [0, 2, 1] -> X=X, Y=Z (Tinggi jadi Depan), Z=Y (Depan jadi Tinggi)
-POINT_CLOUD_AXIS_MAP = [0, 1, 2]
+POINT_CLOUD_AXIS_MAP = [0, 2, 1]
 
 # Invert Sumbu (1 = Normal, -1 = Balik Arah)
 # Format: [Invert X, Invert Y, Invert Z]

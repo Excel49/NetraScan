@@ -10,7 +10,7 @@ class TurntableController:
     Firmware: kodingan_esp (AccelStepper + WebServer)
     """
     
-    def __init__(self, ip_address="192.168.1.39"):
+    def __init__(self, ip_address="10.42.37.40"):
         self.ip = ip_address
         self.base_url = f"http://{self.ip}"
         self.connected = False
@@ -160,16 +160,37 @@ class TurntableController:
             "steps": self.current_steps
         }
 
+    def wait_for_stop(self, timeout=15):
+        """
+        Block until turntable stops moving or timeout reached.
+        Returns True if stopped, False if timed out.
+        """
+        if not self.connected: 
+            return True
+            
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            self.sync_status()
+            if not self.is_moving:
+                return True
+            time.sleep(0.1) # Poll interval
+            
+        print("⚠️ Wait for stop timed out!")
+        return False
+
     def sync_status(self):
         """Update local state from hardware"""
         try:
             if self.connected:
-                response = requests.get(f"{self.base_url}/status", timeout=0.5)
+                # Use short timeout for polling
+                response = requests.get(f"{self.base_url}/status", timeout=1.0)
                 if response.status_code == 200:
                     data = response.json()
-                    self.current_steps = data.get("current_position", 0)
-                    self.is_moving = data.get("is_moving", False)
+                    self.current_steps = int(data.get("current_position", 0))
+                    self.is_moving = bool(data.get("is_moving", False))
                     # Recalculate angle based on steps?
-                    # self.current_angle = (self.current_steps / self.steps_per_rev) * 360.0
-        except:
+                    self.current_angle = (self.current_steps / self.steps_per_rev) * 360.0
+        except Exception as e:
+            # print(f"Status sync error: {e}")
             pass
+
